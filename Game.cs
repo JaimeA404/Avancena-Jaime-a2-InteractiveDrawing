@@ -13,7 +13,15 @@ namespace MohawkGame2D
     {
         // Place your variables here
 
+        // custom colours for the face
+
+        Color skinTone = new Color("#f7b46d");
+        Color Smile = new Color("#fcb6b7");
+
         // damage tracking + display
+
+        Vector2 facePos = new Vector2(400, 200);
+        float faceRadius = 100f;
 
         int punches;
         int slaps;
@@ -34,6 +42,16 @@ namespace MohawkGame2D
         bool messageShown75 = false;
         bool guyBeatToDeath = false;
 
+        // array of messages to display at different damage thresholds
+        String[] messages = {
+            "Please... I have a family...",
+            "STOP!", 
+            "WHAT DID I EVER DO TO YOU?!",
+            "Make it stop..."
+        };
+        float[] messageThresholds = { 25f, 50f, 75f };
+
+
         /// <summary>
         ///     Setup runs once before the game loop begins.
         /// </summary>
@@ -51,6 +69,64 @@ namespace MohawkGame2D
         public void Update()
         {
             Window.ClearBackground(Color.White);
+            
+            void DrawFace(int x, int y)
+            {
+                Draw.FillColor = skinTone;
+                Draw.Circle(x, y, 100); // head
+            }
+
+            void DrawEyeball(int x, int y)
+            {
+                int eyeballRadius = 20;
+                Draw.FillColor = Color.White;
+                Draw.Circle(x, y, eyeballRadius); // sclera 
+                Draw.FillColor = Color.Black;
+                Draw.Circle(x, y, eyeballRadius / 2); // pupil
+            }
+
+            void DrawSmile(int x, int y)
+            {
+                Draw.FillColor = Smile;
+                Draw.Arc(x, y, 60, 30, 0, 180); // smile
+            }
+
+            void DrawLeftHurtEye(int x, int y)
+            {
+                int eyeballRadius = 20;
+                Draw.FillColor = Color.White;
+                Draw.Circle(x, y, eyeballRadius); // sclera
+                Draw.FillColor = Color.Black;
+                Draw.Circle(x, y, eyeballRadius / 2); // pupil
+                Draw.Arc(x, y + 50, 50, 20, 0, 0);
+            }
+
+            void DrawRightHurtEye(int x, int y)
+            {
+                int eyeballRadius = 20;
+                Draw.FillColor = Color.White;
+                Draw.Circle(x, y, eyeballRadius); // sclera
+                Draw.FillColor = Color.Black;
+                Draw.Circle(x, y, eyeballRadius / 2); // pupil
+                Draw.Arc(x, y - 50, 50, 20, 0, 0);
+            }
+            // the victim
+
+            Draw.FillColor = skinTone;
+            DrawFace(400, 200); // head
+            DrawEyeball(360, 180); // left eye
+            DrawEyeball(440, 180); // right eye
+            DrawSmile(400, 240); // mouth
+
+            //HUD displays information
+
+            Raylib.DrawText("Punch with Left Mouse Button", 10, 10, 20, Color.Black);
+            Raylib.DrawText("Slap with Right Mouse Button", 10, 40, 20, Color.Black);
+            Raylib.DrawText("You can hold down the buttons to increase damage", 10, 70, 20, Color.Black);
+            Raylib.DrawText("Punches: " + punches, 10, 100, 20, Color.Black);
+            Raylib.DrawText("Slaps: " + slaps, 10, 130, 20, Color.Black);
+            Raylib.DrawText("Total Damage: " + (int)totalDamage, 10, 160, 20, Color.Black);
+
             // user is going for a punch
             if (Input.IsMouseButtonPressed(MouseInput.Left))
             {
@@ -68,16 +144,27 @@ namespace MohawkGame2D
 
             if (Input.IsMouseButtonReleased(MouseInput.Left))
             {
-                punches++;
-                totalDamage += punchPower;
+                int mouseX = (int)Input.GetMouseX();
+                int mouseY = (int)Input.GetMouseY();
+                Vector2 mousePos = new Vector2(mouseX, mouseY);
 
-                int x = (int)Input.GetMouseX();
-                int y = (int)Input.GetMouseY();
+                float distanceToFace = Vector2.Distance(mousePos, facePos);
+                bool hitFace = distanceToFace <= faceRadius;
 
-                int radius = (int)(punchPower * 30);
+                if (hitFace)
+                {
 
-                Draw.FillColor = Color.Red;
-                Draw.Circle(x, y, radius);
+
+                    punches++;
+                    totalDamage += punchPower;
+                    int radius = (int)(punchPower * 15);
+                    Draw.FillColor = Color.Red;
+                    Draw.Circle(mouseX, mouseY, radius);
+                }
+                else // player missed
+                {
+                    Raylib.DrawText("Missed!", 10, 190, 20, Color.Black);
+                }
             }
 
             // user is going for a slap
@@ -110,14 +197,6 @@ namespace MohawkGame2D
                 Draw.Rectangle(x - width / 2, y - height / 2, width, height);
             }
 
-            //HUD displays information
-
-            Raylib.DrawText("Punch with Left Mouse Button", 10, 10, 20, Color.Black);
-            Raylib.DrawText("Slap with Right Mouse Button", 10, 40, 20, Color.Black);
-            Raylib.DrawText("Punches: " + punches, 10, 70, 20, Color.Black);
-            Raylib.DrawText("Slaps: " + slaps, 10, 100, 20, Color.Black);
-            Raylib.DrawText("Total Damage: " + (int)totalDamage, 10, 130, 20, Color.Black);
-
             // first message at >=25 damage
 
             if (totalDamage >= 25f && totalDamage < 50 && !messageShown25)
@@ -128,9 +207,11 @@ namespace MohawkGame2D
             }
             if (messageActive25)
             {
+                DrawLeftHurtEye(360, 180);
+                DrawRightHurtEye(440, 180);
                 if (Time.SecondsElapsed - messageStartTime < messageActivity)
                 {
-                    Raylib.DrawText("Please... I have a family...", 500, 10, 20, Color.Black);
+                    Raylib.DrawText((messages[0]), 450, 10, 20, Color.Black);
 
                     if (Time.SecondsElapsed == 2f)
                     {
@@ -154,8 +235,8 @@ namespace MohawkGame2D
             {
                 if (Time.SecondsElapsed - messageStartTime < messageActivity)
                 {
-                    Raylib.DrawText("STOP!", 550, 10, 20, Color.Black);
-                    Raylib.DrawText("WHAT DID I EVER DO TO YOU?!", 450, 40, 20, Color.Black);
+                    Raylib.DrawText((messages[1]), 450, 10, 20, Color.Black);
+                    Raylib.DrawText((messages[2]), 450, 40, 20, Color.Black);
                     if (Time.SecondsElapsed == 2f)
                     {
                         messageActive50 = false;
@@ -163,6 +244,8 @@ namespace MohawkGame2D
                     }
                 }
             }
+
+            // third message at >=75 damage
 
             if (totalDamage >= 75f && totalDamage < 100 && !messageShown75)
             {
@@ -176,7 +259,7 @@ namespace MohawkGame2D
             {
                 if (Time.SecondsElapsed - messageStartTime < messageActivity)
                 {
-                    Raylib.DrawText("Make it stop...", 500, 10, 20, Color.Black);
+                    Raylib.DrawText((messages[3]), 450, 10, 20, Color.Black);
                     if (Time.SecondsElapsed == 2f)
                     {
                         messageActive75 = false;
@@ -185,14 +268,26 @@ namespace MohawkGame2D
                 }
             }
 
+            // player wins at 100 damage
+
             if (totalDamage >= 100f)
             {
                 guyBeatToDeath = true;
             }
             if (guyBeatToDeath)
             {
-                Raylib.ClearBackground(Color.White);
-                Raylib.DrawText("You have beaten the guy to death!", 250, 300, 30, Color.Black);
+                Draw.FillColor = Color.White;
+                Draw.Rectangle(0, 0, Window.Width, Window.Height);
+                Draw.FillColor = Color.LightGray;
+                Draw.Rectangle(360, 100, 80, 100);
+                Draw.FillColor = Color.LightGray;
+                Draw.Circle(400, 100, 40);
+                Draw.FillColor = Color.LightGray;
+                Draw.LineColor = Color.LightGray;
+                Draw.Rectangle(361, 101, 78, 50);
+                Raylib.DrawText("R.I.P", 368, 120, 30, Color.Black);
+                Raylib.DrawText("You beat the guy to death!", 200, 300, 30, Color.Black);
+                Raylib.DrawText("You better star running from the police", 180, 400, 30, Color.Black);
             }
         }
     }
